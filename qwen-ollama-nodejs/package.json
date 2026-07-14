@@ -1,0 +1,25 @@
+{
+  "name": "practica-8",
+  "version": "1.0.0",
+  "description": "Practica 8",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChinthakaSandaruwan/Practica-8.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ChinthakaSandaruwan/Practica-8/issues"
+  },
+  "homepage": "https://github.com/ChinthakaSandaruwan/Practica-8#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ollama": "^0.6.3"
+  }
+}
