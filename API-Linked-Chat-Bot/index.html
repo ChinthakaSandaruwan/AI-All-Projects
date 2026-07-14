@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chinthaka Chatbot</title>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Enable dark mode by default
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                900: '#050816',
+                800: '#0A0F2A',
+                700: '#121A45',
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* Smooth scrollbar for chat panel */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(148, 163, 184, 0.12);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 9999px;
+      }
+
+      /* Code block styling */
+      pre {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      code {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      }
+
+      /* Better link styling */
+      a {
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      /* List styling */
+      li {
+        margin-bottom: 0.25rem;
+      }
+    </style>
+  </head>
+
+  <body class="dark bg-brand-900 text-slate-100 min-h-screen">
+    <div class="mx-auto flex h-screen max-w-3xl flex-col px-4 py-6">
+      <header class="flex items-center justify-between border-b border-slate-700 pb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">
+            <span class="text-white font-semibold text-sm">C</span>
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold">Chinthaka</h1>
+            <p class="text-sm text-slate-400">AI Assistant</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+          <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+          <span>Online</span>
+        </div>
+      </header>
+
+      <main class="mt-4 flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-lg">
+        <div
+          id="chatContainer"
+          class="flex-1 overflow-y-auto px-6 py-4 space-y-0 scroll-smooth"
+          aria-label="Chat messages"
+        >
+          <!-- Messages will be inserted here -->
+        </div>
+
+        <form id="chatForm" class="flex items-end gap-3 border-t border-slate-800 bg-slate-950 p-4">
+          <div class="flex-1 relative">
+            <label for="messageInput" class="sr-only">Type a message</label>
+            <textarea
+              id="messageInput"
+              rows="1"
+              autocomplete="off"
+              placeholder="Message Chinthaka..."
+              class="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-none min-h-[44px] max-h-32 overflow-y-auto"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
+            id="sendButton"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+          </button>
+        </form>
+      </main>
+
+      <footer class="mt-4 text-center text-xs text-slate-500">
+        <!-- Built with Tailwind CSS • Powered by OpenRouter AI • ChatGPT-style formatting -->
+      </footer>
+    </div>
+
+    <script>
+      // Suppress Tailwind CDN warning for development
+      console.warn = (function(warn) {
+        return function(message) {
+          if (!message.includes('cdn.tailwindcss.com should not be used in production')) {
+            warn.apply(console, arguments);
+          }
+        };
+      })(console.warn);
+      const chatContainer = document.getElementById('chatContainer');
+      const chatForm = document.getElementById('chatForm');
+      const messageInput = document.getElementById('messageInput');
+      const sendButton = document.getElementById('sendButton');
+
+      let lastRequestTime = 0;
+
+      // Auto-resize textarea
+      messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 128) + 'px'; // Max 8rem height
+      });
+
+      // Handle Enter key (send on Enter, new line on Shift+Enter)
+      messageInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(new Event('submit'));
+        }
+      });
+
+      function formatMessage(text) {
+        // Simple markdown-like formatting for ChatGPT-like appearance
+        let formatted = text
+          // Convert line breaks to HTML
+          .replace(/\n/g, '<br>')
+          // Code blocks (```code```)
+          .replace(/```([\s\S]*?)```/g, '<pre class="bg-slate-900 text-slate-100 p-3 rounded-lg my-2 overflow-x-auto text-xs"><code>$1</code></pre>')
+          // Inline code (`code`)
+          .replace(/`([^`]+)`/g, '<code class="bg-slate-700 text-slate-200 px-1 py-0.5 rounded text-xs">$1</code>')
+          // Bold (**text** or __text__)
+          .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+          .replace(/__(.*?)__/g, '<strong class="font-semibold">$1</strong>')
+          // Italic (*text* or _text_)
+          .replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>')
+          .replace(/_([^_]+)_/g, '<em class="italic">$1</em>')
+          // Headers (# ## ###)
+          .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mb-2">$1</h3>')
+          .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mb-2">$1</h2>')
+          .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-2">$1</h1>')
+          // Lists (- item or * item)
+          .replace(/^[-*] (.*$)/gm, '<li class="ml-4">• $1</li>')
+          // Links [text](url)
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-400 hover:text-indigo-300 underline" target="_blank">$1</a>');
+
+        return formatted;
+      }
+
+      function appendMessage({ text, isUser }) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`;
+
+        const bubble = document.createElement('div');
+        bubble.className =
+          'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ' +
+          (isUser
+            ? 'bg-indigo-500 text-white'
+            : 'bg-slate-800 text-slate-100');
+
+        // Use innerHTML for formatted content, textContent for plain text
+        if (isUser) {
+          bubble.textContent = text;
+        } else {
+          bubble.innerHTML = formatMessage(text);
+        }
+
+        wrapper.appendChild(bubble);
+        chatContainer.appendChild(wrapper);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      async function getBotReply(userMessage) {
+        // OpenRouter API integration
+        const apiKey = 'YOUR_OPENROUTER_API_KEY'; // Replace with your actual API key from https://openrouter.ai/keys
+
+        if (apiKey === 'YOUR_OPENROUTER_API_KEY') {
+          return 'Please set your OpenRouter API key in the code to enable AI responses.';
+        }
+
+        try {
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'nvidia/nemotron-3-super-120b-a12b:free', // Alternative free model with potentially better availability
+              messages: [
+                {                  role: 'system',
+                  content: 'You are Chinthaka, a helpful AI assistant. Provide clear, well-formatted responses. Use markdown for formatting when appropriate. Keep responses concise but informative.'
+                },
+                {                  role: 'user',
+                  content: userMessage,
+                },
+              ],
+            }),
+          });
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              return 'Rate limit exceeded. Please wait a moment before sending another message.';
+            } else if (response.status === 401) {
+              return 'API key is invalid. Please check your OpenRouter API key.';
+            } else if (response.status === 402) {
+              return 'Payment required. Please check your OpenRouter account credits.';
+            } else {
+              throw new Error(`API request failed: ${response.status}`);
+            }
+          }
+
+          const data = await response.json();
+          return data.choices[0].message.content;
+        } catch (error) {
+          console.error('Error fetching from OpenRouter:', error);
+          if (error.message.includes('Failed to fetch')) {
+            return 'Network error. Please check your internet connection and try again.';
+          }
+          return 'Sorry, I encountered an error while processing your message. Please try again.';
+        }
+      }
+
+      chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTime;
+        if (timeSinceLastRequest < 2000) { // Minimum 2 seconds between requests
+          appendMessage({ text: 'Please wait a moment before sending another message.', isUser: false });
+          return;
+        }
+        lastRequestTime = now;
+
+        appendMessage({ text: message, isUser: true });
+        messageInput.value = '';
+        messageInput.style.height = 'auto'; // Reset textarea height
+        sendButton.disabled = true;
+
+        // Show typing indicator
+        const typingWrapper = document.createElement('div');
+        typingWrapper.className = 'flex justify-start mb-4';
+
+        typingWrapper.innerHTML = `
+          <div class="max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm bg-slate-800 text-slate-100">
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1">
+                <div class="h-2 w-2 rounded-full bg-slate-400 animate-bounce"></div>
+                <div class="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.1s"></div>
+                <div class="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style="animation-delay: 0.2s"></div>
+              </div>
+              <span class="text-slate-400">Chinthaka is typing...</span>
+            </div>
+          </div>
+        `;
+        chatContainer.appendChild(typingWrapper);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+          const reply = await getBotReply(message);
+          chatContainer.removeChild(typingWrapper);
+          appendMessage({ text: reply, isUser: false });
+        } catch (error) {
+          chatContainer.removeChild(typingWrapper);
+          appendMessage({ text: 'Sorry, something went wrong. Please try again.', isUser: false });
+        } finally {
+          sendButton.disabled = false;
+        }
+      });
+
+      // Optional: add a welcome message
+      appendMessage({
+        text: `Hello! I'm **Chinthaka**, your AI assistant. 
+
+I'm here to help you with any questions or tasks you have. Feel free to ask me anything!
+
+**Some things I can help with:**
+• Answer questions and provide information
+• Help with coding and technical problems  
+• Creative writing and brainstorming
+• General conversation and advice
+
+What would you like to talk about?`,
+        isUser: false
+      });
+    </script>
+
+  </body>
+</html>
+
